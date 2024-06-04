@@ -20,4 +20,8 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Server.API\Server.API.csproj" />
+  </ItemGroup>
+
 </Project>
