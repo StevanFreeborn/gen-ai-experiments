@@ -4,4 +4,8 @@
   },
   "dotnet.defaultSolution": "server/Server.sln",
   "editor.formatOnSave": true,
+  "cSpell.words": [
+    "pinia",
+    "rushstack"
+  ],
 }
