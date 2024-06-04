@@ -1,0 +1,7 @@
+{
+  "editor.codeActionsOnSave": {
+    "source.fixAll": "explicit"
+  },
+  "dotnet.defaultSolution": "server/Server.sln",
+  "editor.formatOnSave": true,
+}
