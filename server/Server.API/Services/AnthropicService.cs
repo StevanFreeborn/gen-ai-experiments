@@ -58,11 +58,11 @@ class AnthropicService(HttpClient httpClient, IOptions<AnthropicOptions> options
     };
 
     var response = await _client.Messages.GetClaudeMessageAsync(msgParams);
-    var result = TryParseCompletion(response.Message);
+    var result = ParseCompletion(response.Message);
     return result.Completion;
   }
 
-  private CompletionResult TryParseCompletion(string completion)
+  private CompletionResult ParseCompletion(string completion)
   {
     try
     {
