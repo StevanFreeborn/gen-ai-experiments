@@ -16,7 +16,7 @@ class PromptBuilder : IPromptBuilder
     {userInput}
     </prompt>
 
-    Your job is to continue writing from where this completion left off, matching the style and content of the original prompt as closely as possible. Aim to write at least 50 additional words, but feel free to write more if needed to bring the text to a natural stopping point. Do not abruptly cut off the completion just to hit a word count.
+    Your job is to continue writing from where this prompt left off, matching the style and content of the original prompt as closely as possible. Aim to write at least 50 additional words, but feel free to write more if needed to bring the text to a natural stopping point. Do not abruptly cut off the completion just to hit a word count.
 
     When you are done, output your full completion as a valid JSON object with a property of `completion`. The completion should NOT include the {{PROMPT}} text. For example:
 
