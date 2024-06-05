@@ -54,7 +54,7 @@ class AnthropicService(HttpClient httpClient, IOptions<AnthropicOptions> options
       Model = Model,
       MaxTokens = 1024,
       Stream = false,
-      Temperature = 0.7m,
+      Temperature = 1.0m,
     };
 
     var response = await _client.Messages.GetClaudeMessageAsync(msgParams);
