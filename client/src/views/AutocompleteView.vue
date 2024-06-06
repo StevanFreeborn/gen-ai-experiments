@@ -18,6 +18,12 @@ import { ref } from 'vue';
 const editorValue = ref('');
 const suggestion = ref('');
 const enablePredictiveText = ref(true);
+const audio = new Audio(bloopSound);
+
+function playBloopSound() {
+  audio.currentTime = 1.55;
+  audio.play();
+}
 
 function createTypingHandlers(delay, callback) {
   let typingTimer;
@@ -135,6 +141,8 @@ const { handleKeyUp, handleKeyDown } = createTypingHandlers(1000, async (event, 
     `<span id="ai-suggestion" style="opacity: 0.7;">${suggestionText}</span>`
   );
 
+  playBloopSound();
+
   editor.selection.setCursorLocation(anchorNode, anchorOffset);
 });
 
@@ -150,12 +158,6 @@ function handleBlur(event, editor) {
   const suggestionNode = editor.dom.get('ai-suggestion');
   suggestionNode.remove();
   suggestion.value = '';
-}
-
-const audio = new Audio(bloopSound);
-function playBloopSound() {
-  audio.currentTime = 1.5;
-  audio.play();
 }
 
 const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -179,10 +181,8 @@ const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
           auto_focus: true,
           skin: isDarkMode ? 'tinymce-5-dark' : 'tinymce-5',
           setup: editor => {
-            editor.ui.registry.addIcon('brain', brainIcon);
-
             editor.ui.registry.addToggleButton('disablePredictiveText', {
-              text: '🧠',
+              icon: 'ai',
               onSetup: api => {
                 api.setActive(enablePredictiveText);
               },
