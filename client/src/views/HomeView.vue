@@ -1,7 +1,34 @@
-<script setup lang="ts"></script>
+<script setup lang="ts">
+import { RouterLink } from 'vue-router';
+</script>
 
 <template>
   <main>
-    <h1>Home</h1>
+    <nav>
+      <ul>
+        <li>
+          <RouterLink to="/autocomplete">Predictive Autocomplete</RouterLink>
+        </li>
+      </ul>
+    </nav>
   </main>
 </template>
+
+<style scoped>
+main {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+}
+
+nav {
+  font-size: 1.5rem;
+}
+
+ul {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+</style>
