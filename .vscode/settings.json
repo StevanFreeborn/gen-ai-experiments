@@ -5,7 +5,13 @@
   "dotnet.defaultSolution": "server/Server.sln",
   "editor.formatOnSave": true,
   "cSpell.words": [
+    "aligncenter",
+    "alignjustify",
+    "alignleft",
+    "alignright",
     "pinia",
-    "rushstack"
+    "rushstack",
+    "tinymce",
+    "VITE"
   ],
 }

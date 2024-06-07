@@ -27,15 +27,18 @@
     audio.play();
   }
 
-  function createTypingHandlers(delay, callback) {
-    let typingTimer;
+  function createTypingHandlers(
+    delay: number,
+    callback: (event: KeyboardEvent, editor: any) => void
+  ) {
+    let typingTimer: any;
 
-    function handleKeyUp(event, editor) {
+    function handleKeyUp(event: KeyboardEvent, editor: any) {
       if (editor === undefined) {
         return;
       }
 
-      clearTimeout(typingTimer);
+      clearTimeout(typingTimer as number);
 
       const blacklist = [
         'ArrowLeft',
@@ -56,12 +59,12 @@
       typingTimer = setTimeout(() => doneTyping(event, editor), delay);
     }
 
-    function handleKeyDown(event, editor) {
+    function handleKeyDown(event: KeyboardEvent, editor: any) {
       if (editor === undefined) {
         return;
       }
 
-      clearTimeout(typingTimer);
+      clearTimeout(typingTimer as number);
 
       if (!suggestion.value) {
         return;
@@ -97,7 +100,7 @@
       suggestionNode.textContent = suggestion.value;
     }
 
-    function doneTyping(event, editor) {
+    function doneTyping(event: KeyboardEvent, editor: any) {
       callback(event, editor);
     }
 
@@ -115,7 +118,7 @@
     const res = await fetch(`${import.meta.env.VITE_API_URL}/complete`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json; charset=UTF-8',
       },
       body: JSON.stringify({ input: editorValue.value }),
     });
@@ -148,7 +151,7 @@
     editor.selection.setCursorLocation(anchorNode, anchorOffset);
   });
 
-  function handleBlur(event, editor) {
+  function handleBlur(event: FocusEvent, editor: any) {
     if (editor === undefined) {
       return;
     }
@@ -187,13 +190,13 @@
           toolbar_mode: 'scrolling',
           auto_focus: true,
           skin: isDarkMode ? 'tinymce-5-dark' : 'tinymce-5',
-          setup: editor => {
+          setup: (editor: any) => {
             editor.ui.registry.addToggleButton('disablePredictiveText', {
               icon: 'ai',
-              onSetup: api => {
+              onSetup: (api: any) => {
                 api.setActive(enablePredictiveText);
               },
-              onAction: api => {
+              onAction: (api: any) => {
                 playBloopSound();
                 enablePredictiveText = !enablePredictiveText;
                 api.setActive(enablePredictiveText);
@@ -244,3 +247,5 @@
     opacity: 0.5;
   }
 </style>
+: number | undefined: { (event: any, editor: any): Promise
+<void></void>

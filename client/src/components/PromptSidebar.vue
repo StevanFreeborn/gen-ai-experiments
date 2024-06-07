@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { computed, ref } from 'vue';
+  import { computed, ref, watch } from 'vue';
 
   const props = defineProps<{
     show: boolean;
@@ -12,7 +12,21 @@
   const prompt = ref('');
   const output = ref('');
   const textArea = ref<HTMLTextAreaElement | null>(null);
+  const promptContainer = ref<HTMLDivElement | null>(null);
   const isSubmitting = ref(false);
+  const placeholder = computed(() => {
+    return isSubmitting.value
+      ? 'Working on it...'
+      : output.value
+        ? 'Anything you want to add or change?'
+        : 'What would you like help with?';
+  });
+
+  watch(props, newValue => {
+    if (newValue.show === true && textArea.value !== null) {
+      textArea.value.focus();
+    }
+  });
 
   const sidebarClasses = computed(() => {
     return {
@@ -28,6 +42,10 @@
   function handlePromptInput(event: Event) {
     const target = event.target as HTMLTextAreaElement;
     prompt.value = target.value;
+
+    if (textArea.value === null) {
+      return;
+    }
 
     if (prompt.value.includes('\n') === false) {
       textArea.value.style.height = '2rem';
@@ -53,6 +71,22 @@
     }
   }
 
+  function handleTextAreaFocus() {
+    if (promptContainer.value === null) {
+      return;
+    }
+
+    promptContainer.value.style.outline = '1px solid #ffffff';
+  }
+
+  function handleTextAreaBlur() {
+    if (promptContainer.value === null) {
+      return;
+    }
+
+    promptContainer.value.style.outline = 'none';
+  }
+
   async function handleSubmit() {
     isSubmitting.value = true;
 
@@ -61,9 +95,55 @@
       return;
     }
 
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/generate`, {
+      method: 'POST',
+      headers: {
+        'Content-type': 'application/json; charset=UTF-8',
+      },
+      body: JSON.stringify({
+        input: prompt.value,
+        existingContent: output.value,
+      }),
+    });
 
-    output.value = '<h1>Response</h1><p>This is a response to your prompt.</p>';
+    if (!response.ok || !response.body) {
+      isSubmitting.value = false;
+      alert('An error occurred. Please try again.');
+      return;
+    }
+
+    const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
+
+    if (!reader) {
+      isSubmitting.value = false;
+      alert('Failed to read response. Please try again.');
+      return;
+    }
+
+    output.value = '';
+
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      const { done, value } = await reader.read();
+
+      if (done) {
+        break;
+      }
+
+      if (!value) {
+        continue;
+      }
+
+      const pattern = /<response>(.*?)<\/response>/g;
+      const matches = value.matchAll(pattern);
+
+      for (const match of matches) {
+        output.value += match[1].replace(/\\n/g, '<br>');
+      }
+    }
+
+    reader.releaseLock();
+
     prompt.value = '';
     isSubmitting.value = false;
   }
@@ -79,18 +159,20 @@
       <div class="response-container">
         <div v-html="output"></div>
       </div>
-      <div class="prompt-container">
+      <div class="prompt-container" ref="promptContainer">
         <label for="prompt" class="sr-only">Prompt</label>
         <textarea
           ref="textArea"
           id="prompt"
           name="prompt"
           class="prompt-input"
-          autofocus="true"
-          placeholder="What would you like help with?"
+          :autofocus="show"
+          :placeholder="placeholder"
           :value="prompt"
           @input="handlePromptInput"
           @keydown="handlePromptKeyDown"
+          @focus="handleTextAreaFocus"
+          @blur="handleTextAreaBlur"
         ></textarea>
         <button
           type="button"
@@ -132,10 +214,13 @@
     background-color: var(--bg-color);
     transition: width 0.5s ease-in-out;
     overflow: hidden;
+    box-shadow: -1px 0 5px rgba(0, 0, 0, 0.2);
+    border-top-left-radius: 0.5rem;
+    border-bottom-left-radius: 0.5rem;
   }
 
   .show {
-    width: 100%;
+    width: 50%;
   }
 
   .sidebar {
@@ -176,6 +261,7 @@
     border: 1px solid var(--border-color);
     border-radius: 0.5rem;
     overflow-y: auto;
+    scrollbar-color: var(--border-color) var(--bg-color);
   }
 
   .prompt-container {
@@ -186,10 +272,6 @@
     background-color: var(--bg-color);
     border-radius: 0.5rem;
     border: 1px solid var(--border-color);
-
-    &:focus {
-      outline: 2px solid var(--border-color);
-    }
 
     textarea {
       flex: 1;
@@ -221,6 +303,10 @@
       align-items: center;
       justify-content: center;
 
+      &:focus &:active {
+        outline: 1px solid #ffffff;
+      }
+
       & span {
         display: flex;
         align-items: center;
@@ -248,6 +334,57 @@
     }
     100% {
       transform: rotate(360deg);
+    }
+  }
+</style>
+
+<style>
+  .response-container {
+    div:first-child {
+      display: flex;
+      flex-direction: column;
+
+      & h1 {
+        font-size: 2em;
+        margin-bottom: 10px;
+      }
+
+      & h2 {
+        font-size: 1.5em;
+        margin-bottom: 8px;
+      }
+
+      & h3 {
+        font-size: 1.2em;
+        margin-bottom: 6px;
+      }
+
+      & p {
+        margin-bottom: 15px;
+      }
+
+      & ul,
+      & ol {
+        margin-left: 20px;
+        margin-bottom: 15px;
+      }
+
+      ul {
+        list-style-type: disc;
+      }
+
+      & li {
+        margin-bottom: 5px;
+      }
+
+      & a {
+        color: #007bff;
+        text-decoration: none;
+      }
+
+      & a:hover {
+        text-decoration: underline;
+      }
     }
   }
 </style>
