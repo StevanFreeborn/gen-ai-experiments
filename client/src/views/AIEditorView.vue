@@ -12,6 +12,7 @@
 
   import Editor from '@tinymce/tinymce-vue';
   import PromptSidebar from '@/components/PromptSidebar.vue';
+  import * as tinymce from 'tinymce';
   import { ref } from 'vue';
 
   const isLoading = ref(true);
@@ -20,9 +21,9 @@
   const enablePredictiveText = ref<boolean>(true);
   const audio = new Audio(bloopSound);
   const showSidebar = ref(false);
-  const editorRef = ref<any>(null);
+  const editorRef = ref<tinymce.Editor | null>(null);
 
-  function handleEditorInitialized(event: any, editor: any) {
+  function handleEditorInitialized(event: Event, editor: tinymce.Editor) {
     editorRef.value = editor;
     isLoading.value = false;
   }
@@ -34,11 +35,11 @@
 
   function createTypingHandlers(
     delay: number,
-    callback: (event: KeyboardEvent, editor: any) => void
+    callback: (event: KeyboardEvent, editor: tinymce.Editor) => void
   ) {
-    let typingTimer: any;
+    let typingTimer: number;
 
-    function handleKeyUp(event: KeyboardEvent, editor: any) {
+    function handleKeyUp(event: KeyboardEvent, editor: tinymce.Editor) {
       if (editor === undefined) {
         return;
       }
@@ -61,10 +62,10 @@
         return;
       }
 
-      typingTimer = setTimeout(() => doneTyping(event, editor), delay);
+      typingTimer = window.setTimeout(() => doneTyping(event, editor), delay);
     }
 
-    function handleKeyDown(event: KeyboardEvent, editor: any) {
+    function handleKeyDown(event: KeyboardEvent, editor: tinymce.Editor) {
       if (editor === undefined) {
         return;
       }
@@ -85,7 +86,7 @@
       if (event.key === 'Tab') {
         event.preventDefault();
         const suggestionNode = editor.dom.get('ai-suggestion');
-        suggestionNode.remove();
+        suggestionNode?.remove();
 
         editor.execCommand('mceInsertContent', false, suggestion.value);
 
@@ -94,7 +95,9 @@
       }
 
       if (event.key === 'Escape' || event.key !== firstChar) {
-        suggestionNode.textContent = '';
+        if (suggestionNode !== null) {
+          suggestionNode.textContent = '';
+        }
         suggestion.value = '';
         editor.execCommand('mceInsertContent', false, '');
 
@@ -102,10 +105,13 @@
       }
 
       suggestion.value = suggestion.value.slice(1);
-      suggestionNode.textContent = suggestion.value;
+
+      if (suggestionNode) {
+        suggestionNode.textContent = suggestion.value;
+      }
     }
 
-    function doneTyping(event: KeyboardEvent, editor: any) {
+    function doneTyping(event: KeyboardEvent, editor: tinymce.Editor) {
       callback(event, editor);
     }
 
@@ -156,8 +162,7 @@
       return;
     }
 
-    const { anchorNode, anchorOffset } = editor.selection.getSel();
-
+    const { anchorNode, anchorOffset } = editor.selection.getSel()!;
     suggestion.value = suggestionText;
 
     const suggestionNode = editor.dom.get('ai-suggestion');
@@ -174,20 +179,24 @@
 
     playBloopSound();
 
-    editor.selection.setCursorLocation(anchorNode, anchorOffset);
+    editor.selection.setCursorLocation(anchorNode!, anchorOffset);
   });
 
-  function removeSuggestion(editor: any) {
+  function removeSuggestion(editor: tinymce.Editor) {
     if (editor === undefined) {
       return;
     }
 
     const suggestionNode = editor.dom.get('ai-suggestion');
-    suggestionNode.textContent = '';
+
+    if (suggestionNode !== null) {
+      suggestionNode.textContent = '';
+    }
+
     suggestion.value = '';
   }
 
-  function handleBlur(event: FocusEvent, editor: any) {
+  function handleBlur(event: FocusEvent, editor: tinymce.Editor) {
     if (!suggestion.value) {
       return;
     }
@@ -197,7 +206,7 @@
 
   function handlePromptSidebarClose() {
     showSidebar.value = false;
-    editorRef.value.focus();
+    editorRef.value?.focus();
   }
 
   function handleAcceptPromptResponse(output: string) {
@@ -239,13 +248,14 @@
           toolbar_mode: 'scrolling',
           auto_focus: true,
           skin: 'tinymce-5-dark',
-          setup: (editor: any) => {
+          setup: (editor: tinymce.Editor) => {
             editor.ui.registry.addToggleButton('disablePredictiveText', {
               icon: 'ai',
-              onSetup: (api: any) => {
+              onSetup: api => {
                 api.setActive(enablePredictiveText);
+                return api => {};
               },
-              onAction: (api: any) => {
+              onAction: api => {
                 playBloopSound();
                 enablePredictiveText = !enablePredictiveText;
                 api.setActive(enablePredictiveText);
