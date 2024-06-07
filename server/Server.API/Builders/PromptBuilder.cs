@@ -57,30 +57,18 @@ class PromptBuilder : IPromptBuilder
 
     Now, please complete the writing task for the user. Focus on being helpful, engaging, and providing the highest quality content possible to assist them. 
 
-    Format your writing response in clean, properly structured HTML that would be suitable for inserting into the body of a webpage.
+    Format your writing response in properly structured HTML that would be suitable for inserting into the body of a webpage.
 
     For example:
     ```html
     <h1>Title of the Writing Task</h1>
     <p>Here is the content that you generate to fulfill the writing task...</p>
     <h2>Subheading</h2>
-    <ul>
-      <li>Point 1</li>
-      <li>Point 2</li>
-      <li>Point 3</li>
-    </ul>
-    <h2>Steps</h2>
-    <ol>
-      <li>Step 1</li>
-      <li>Step 2</li>
-      <li>Step 3</li>
-    </ol>
     <p>Additional content...</p>
     ```
 
-    Respond only with your HTML-formatted writing completion. Do not include any other text, notes, or explanations in your response.
+    Remember, properly structure your HTML ensuring that all tags are opened and closed. DO NOT include any partial or incomplete HTML in your response.
 
-    Remember, properly structure your HTML ensuring that all tags are correctly opened and closed. Pay special attention to ordered and unordered list
-    tags. They should always have an opening and closing tag. For example, `<ul></ul>` or `<ol></ol>`.
+    Respond only with your properly structured HTML writing completion. Do not include any other text, notes, or explanations in your response.
   """;
 }

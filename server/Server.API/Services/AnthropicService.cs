@@ -25,7 +25,6 @@ interface IAnthropicService
 class AnthropicService(HttpClient httpClient, IOptions<AnthropicOptions> options, IPromptBuilder builder) : IAnthropicService
 {
   private readonly JsonSerializerOptions _serializerOptions = new() { PropertyNameCaseInsensitive = true };
-  private const string Model = AnthropicModels.Claude3Haiku;
   private readonly AnthropicClient _client = new(options.Value.Key, httpClient);
   private readonly IPromptBuilder _promptBuilder = builder;
 
@@ -36,7 +35,7 @@ class AnthropicService(HttpClient httpClient, IOptions<AnthropicOptions> options
     var msgParams = new MessageParameters()
     {
       Messages = [new(RoleType.User, prompt)],
-      Model = Model,
+      Model = AnthropicModels.Claude3Sonnet,
       MaxTokens = 1024,
       Stream = true,
       Temperature = 1m,
@@ -58,7 +57,7 @@ class AnthropicService(HttpClient httpClient, IOptions<AnthropicOptions> options
     var msgParams = new MessageParameters()
     {
       Messages = [new(RoleType.User, prompt)],
-      Model = Model,
+      Model = AnthropicModels.Claude3Haiku,
       MaxTokens = 1024,
       Stream = false,
       Temperature = 1.0m,

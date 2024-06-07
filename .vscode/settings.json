@@ -9,6 +9,8 @@
     "alignjustify",
     "alignleft",
     "alignright",
+    "bullist",
+    "numlist",
     "pinia",
     "rushstack",
     "tinymce",

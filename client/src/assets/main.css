@@ -14,7 +14,6 @@
 button {
   background: none;
   border: none;
-  outline: none;
   cursor: pointer;
 }
 
@@ -24,7 +23,7 @@ a {
 }
 
 ul {
-  list-style-type: none;
+  list-style: none;
 }
 
 img {
@@ -52,6 +51,8 @@ table {
 html,
 body,
 #app {
+  display: flex;
+  flex-direction: column;
   height: 100%;
 }
 

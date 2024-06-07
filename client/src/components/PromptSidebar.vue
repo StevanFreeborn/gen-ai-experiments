@@ -7,12 +7,24 @@
 
   const emit = defineEmits<{
     close: [];
+    accept: [string];
   }>();
 
   const prompt = ref('');
   const output = ref('');
+  const parsedOutput = computed(() => {
+    if (!output.value) {
+      return '';
+    }
+
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(output.value, 'text/html');
+    const parsed = doc.documentElement.outerHTML;
+    return parsed;
+  });
   const textArea = ref<HTMLTextAreaElement | null>(null);
   const promptContainer = ref<HTMLDivElement | null>(null);
+  const responseContainer = ref<HTMLDivElement | null>(null);
   const isSubmitting = ref(false);
   const placeholder = computed(() => {
     return isSubmitting.value
@@ -37,6 +49,8 @@
 
   function handleCloseButtonClick() {
     emit('close');
+    output.value = '';
+    prompt.value = '';
   }
 
   function handlePromptInput(event: Event) {
@@ -44,11 +58,6 @@
     prompt.value = target.value;
 
     if (textArea.value === null) {
-      return;
-    }
-
-    if (prompt.value.includes('\n') === false) {
-      textArea.value.style.height = '2rem';
       return;
     }
 
@@ -64,9 +73,9 @@
   }
 
   function handlePromptKeyDown(event: KeyboardEvent) {
-    if (event.key === 'Enter' && event.shiftKey === true) {
+    if (event.key === 'Enter' && event.ctrlKey === true) {
       event.preventDefault();
-      // TODO: Handle submit
+      handleSubmit();
       return;
     }
   }
@@ -121,6 +130,7 @@
     }
 
     output.value = '';
+    prompt.value = '';
 
     // eslint-disable-next-line no-constant-condition
     while (true) {
@@ -134,11 +144,16 @@
         continue;
       }
 
-      const pattern = /<response>(.*?)<\/response>/g;
+      const pattern = /<response>([\s\S]*?)<\/response>/g;
       const matches = value.matchAll(pattern);
 
       for (const match of matches) {
-        output.value += match[1].replace(/\\n/g, '<br>');
+        output.value += match[1];
+
+        responseContainer.value?.scrollTo({
+          top: responseContainer.value.scrollHeight,
+          behavior: 'smooth',
+        });
       }
     }
 
@@ -147,17 +162,35 @@
     prompt.value = '';
     isSubmitting.value = false;
   }
+
+  function handleAcceptButtonClick() {
+    emit('close');
+    emit('accept', output.value);
+    output.value = '';
+  }
 </script>
 
 <template>
   <div :class="sidebarClasses">
     <div class="sidebar">
-      <div class="action-container">
-        <button type="button" class="accept-button" v-if="output">Accept</button>
-        <button type="button" class="close-button" @click="handleCloseButtonClick">Close</button>
+      <div class="heading-container">
+        <div class="heading">
+          <h2>Writing Assistant</h2>
+        </div>
+        <div class="action-container">
+          <button
+            type="button"
+            class="accept-button"
+            v-if="output"
+            @click="handleAcceptButtonClick"
+          >
+            Accept
+          </button>
+          <button type="button" class="close-button" @click="handleCloseButtonClick">Close</button>
+        </div>
       </div>
-      <div class="response-container">
-        <div v-html="output"></div>
+      <div class="response-container" ref="responseContainer">
+        <div v-html="parsedOutput"></div>
       </div>
       <div class="prompt-container" ref="promptContainer">
         <label for="prompt" class="sr-only">Prompt</label>
@@ -169,6 +202,7 @@
           :autofocus="show"
           :placeholder="placeholder"
           :value="prompt"
+          :disabled="isSubmitting"
           @input="handlePromptInput"
           @keydown="handlePromptKeyDown"
           @focus="handleTextAreaFocus"
@@ -232,26 +266,39 @@
     gap: 1rem;
   }
 
-  .action-container {
+  .heading-container {
     display: flex;
     width: 100%;
     justify-content: flex-end;
     gap: 1rem;
 
-    button {
-      padding: 0.5rem 1rem;
-      border: 1px solid var(--border-color);
-      border-radius: 0.5rem;
-      color: var(--text-color);
-      cursor: pointer;
+    .heading {
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
-    .accept-button {
-      background-color: var(--success-color);
-    }
+    .action-container {
+      display: flex;
+      justify-content: flex-end;
+      gap: 1rem;
 
-    .close-button {
-      background-color: var(--danger-color);
+      button {
+        padding: 0.5rem 1rem;
+        border: 1px solid var(--border-color);
+        border-radius: 0.5rem;
+        color: var(--text-color);
+        cursor: pointer;
+      }
+
+      .accept-button {
+        background-color: var(--success-color);
+      }
+
+      .close-button {
+        background-color: var(--danger-color);
+      }
     }
   }
 
@@ -302,10 +349,6 @@
       display: flex;
       align-items: center;
       justify-content: center;
-
-      &:focus &:active {
-        outline: 1px solid #ffffff;
-      }
 
       & span {
         display: flex;

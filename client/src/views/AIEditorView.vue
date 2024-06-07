@@ -2,25 +2,31 @@
   import 'tinymce';
   import bloopSound from '@/assets/bloop.mp3';
 
-  /* Required TinyMCE components */
   import 'tinymce/icons/default';
   import 'tinymce/themes/silver';
   import 'tinymce/models/dom/model';
 
-  /* Import a skin (can be a custom skin instead of the default) */
   import 'tinymce/skins/ui/tinymce-5/skin.css';
-
   import 'tinymce/skins/ui/tinymce-5-dark/skin.css';
+
+  import 'tinymce/plugins/lists';
 
   import Editor from '@tinymce/tinymce-vue';
   import PromptSidebar from '@/components/PromptSidebar.vue';
   import { ref } from 'vue';
 
+  const isLoading = ref(true);
   const editorValue = ref('');
   const suggestion = ref('');
   const enablePredictiveText = ref<boolean>(true);
   const audio = new Audio(bloopSound);
   const showSidebar = ref(false);
+  const editorRef = ref<any>(null);
+
+  function handleEditorInitialized(event: any, editor: any) {
+    editorRef.value = editor;
+    isLoading.value = false;
+  }
 
   function playBloopSound() {
     audio.currentTime = 1.55;
@@ -89,7 +95,7 @@
       }
 
       if (event.key === 'Escape' || event.key !== firstChar) {
-        suggestionNode.remove();
+        suggestionNode.textContent = '';
         suggestion.value = '';
         editor.execCommand('mceInsertContent', false, '');
 
@@ -111,17 +117,34 @@
   }
 
   const { handleKeyUp, handleKeyDown } = createTypingHandlers(1000, async (event, editor) => {
-    if (!editorValue.value || suggestion.value || enablePredictiveText.value === false) {
+    if (
+      editorValue.value.trim().length === 0 ||
+      suggestion.value ||
+      enablePredictiveText.value === false
+    ) {
       return;
     }
+
+    const originalEditorValue = editorValue.value;
 
     const res = await fetch(`${import.meta.env.VITE_API_URL}/complete`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json; charset=UTF-8',
       },
-      body: JSON.stringify({ input: editorValue.value }),
+      body: JSON.stringify({ input: originalEditorValue }),
     });
+
+    // If the editor value has changed since the fetch request was made, then we don't want to show the suggestion
+    if (editorValue.value !== originalEditorValue) {
+      return;
+    }
+
+    // If the selection is not collapsed, then we don't want to show the suggestion
+    // This is to prevent the suggestion from being inserted when the user is selecting text
+    if (editor.selection.isCollapsed() === false) {
+      return;
+    }
 
     if (!res.ok) {
       return;
@@ -129,6 +152,10 @@
 
     const data = await res.json();
     const suggestionText = data.response;
+
+    if (!suggestionText) {
+      return;
+    }
 
     const { anchorNode, anchorOffset } = editor.selection.getSel();
 
@@ -151,37 +178,62 @@
     editor.selection.setCursorLocation(anchorNode, anchorOffset);
   });
 
-  function handleBlur(event: FocusEvent, editor: any) {
+  function removeSuggestion(editor: any) {
     if (editor === undefined) {
       return;
     }
 
+    const suggestionNode = editor.dom.get('ai-suggestion');
+    suggestionNode.textContent = '';
+    suggestion.value = '';
+  }
+
+  function handleBlur(event: FocusEvent, editor: any) {
     if (!suggestion.value) {
       return;
     }
 
-    const suggestionNode = editor.dom.get('ai-suggestion');
-    suggestionNode.remove();
-    suggestion.value = '';
+    removeSuggestion(editor);
   }
 
   const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
 
   function handlePromptSidebarClose() {
     showSidebar.value = false;
+    editorRef.value.focus();
+  }
+
+  function handleAcceptPromptResponse(output: string) {
+    if (editorRef.value === null) {
+      return;
+    }
+
+    editorRef.value.setContent(output);
+    editorRef.value.focus();
+    playBloopSound();
   }
 </script>
 
 <template>
-  <PromptSidebar :show="showSidebar" @close="handlePromptSidebarClose" />
+  <PromptSidebar
+    :show="showSidebar"
+    @close="handlePromptSidebarClose"
+    @accept="handleAcceptPromptResponse"
+  />
   <main>
     <div id="container" class="container">
+      <div class="loading-message" :style="{ display: isLoading ? 'flex' : 'none' }">
+        <p>Loading...</p>
+      </div>
       <Editor
         class="textarea"
+        :style="{ display: isLoading ? 'none' : 'block' }"
         api-key="no-api-key"
         :init="{
+          plugins: 'lists',
+          lists_indent_on_tab: false,
           toolbar:
-            'undo redo | styles | bold italic | alignleft aligncenter alignright alignjustify | outdent indent | disablePredictiveText showPromptSidebar',
+            'undo redo | styles | bold italic | alignleft aligncenter alignright alignjustify | outdent indent | bullist numlist | disablePredictiveText showPromptSidebar',
           menubar: false,
           promotion: false,
           branding: false,
@@ -214,6 +266,7 @@
         :inline="true"
         output-format="text"
         v-model="editorValue"
+        @init="handleEditorInitialized"
         @keyup="handleKeyUp"
         @keydown="handleKeyDown"
         @blur="handleBlur"
@@ -233,6 +286,12 @@
     height: 100%;
   }
 
+  .loading-message {
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+  }
+
   .textarea {
     position: relative;
     border: 1px solid var(--border-color);
@@ -241,11 +300,23 @@
     width: 100%;
     height: 100%;
     resize: none;
+    overflow: auto;
+    scrollbar-color: var(--border-color) var(--bg-color);
   }
 
   .ai-suggestion {
     opacity: 0.5;
   }
 </style>
-: number | undefined: { (event: any, editor: any): Promise
-<void></void>
+
+<style>
+  .mce-content-body ul {
+    list-style-type: disc;
+    margin-left: 1rem;
+  }
+
+  .mce-content-body ol {
+    list-style-type: decimal;
+    margin-left: 1rem;
+  }
+</style>
