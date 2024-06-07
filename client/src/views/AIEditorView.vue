@@ -6,7 +6,6 @@
   import 'tinymce/themes/silver';
   import 'tinymce/models/dom/model';
 
-  import 'tinymce/skins/ui/tinymce-5/skin.css';
   import 'tinymce/skins/ui/tinymce-5-dark/skin.css';
 
   import 'tinymce/plugins/lists';
@@ -196,8 +195,6 @@
     removeSuggestion(editor);
   }
 
-  const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
-
   function handlePromptSidebarClose() {
     showSidebar.value = false;
     editorRef.value.focus();
@@ -241,7 +238,7 @@
           extended_valid_elements: 'span[*]',
           toolbar_mode: 'scrolling',
           auto_focus: true,
-          skin: isDarkMode ? 'tinymce-5-dark' : 'tinymce-5',
+          skin: 'tinymce-5-dark',
           setup: (editor: any) => {
             editor.ui.registry.addToggleButton('disablePredictiveText', {
               icon: 'ai',
