@@ -1,169 +1,176 @@
-<script setup>
-import 'tinymce';
-import bloopSound from '@/assets/bloop.mp3';
+<script setup lang="ts">
+  import 'tinymce';
+  import bloopSound from '@/assets/bloop.mp3';
 
-/* Required TinyMCE components */
-import 'tinymce/icons/default';
-import 'tinymce/themes/silver';
-import 'tinymce/models/dom/model';
+  /* Required TinyMCE components */
+  import 'tinymce/icons/default';
+  import 'tinymce/themes/silver';
+  import 'tinymce/models/dom/model';
 
-/* Import a skin (can be a custom skin instead of the default) */
-import 'tinymce/skins/ui/tinymce-5/skin.css';
+  /* Import a skin (can be a custom skin instead of the default) */
+  import 'tinymce/skins/ui/tinymce-5/skin.css';
 
-import 'tinymce/skins/ui/tinymce-5-dark/skin.css';
+  import 'tinymce/skins/ui/tinymce-5-dark/skin.css';
 
-import Editor from '@tinymce/tinymce-vue';
-import { ref } from 'vue';
+  import Editor from '@tinymce/tinymce-vue';
+  import PromptSidebar from '@/components/PromptSidebar.vue';
+  import { ref } from 'vue';
 
-const editorValue = ref('');
-const suggestion = ref('');
-const enablePredictiveText = ref(true);
-const audio = new Audio(bloopSound);
+  const editorValue = ref('');
+  const suggestion = ref('');
+  const enablePredictiveText = ref<boolean>(true);
+  const audio = new Audio(bloopSound);
+  const showSidebar = ref(false);
 
-function playBloopSound() {
-  audio.currentTime = 1.55;
-  audio.play();
-}
-
-function createTypingHandlers(delay, callback) {
-  let typingTimer;
-
-  function handleKeyUp(event, editor) {
-    if (editor === undefined) {
-      return;
-    }
-
-    clearTimeout(typingTimer);
-
-    const blacklist = [
-      'ArrowLeft',
-      'ArrowRight',
-      'ArrowUp',
-      'ArrowDown',
-      'Escape',
-      'Tab',
-      'Control',
-      'Alt',
-      'Meta',
-    ];
-
-    if (blacklist.includes(event.key)) {
-      return;
-    }
-
-    typingTimer = setTimeout(() => doneTyping(event, editor), delay);
+  function playBloopSound() {
+    audio.currentTime = 1.55;
+    audio.play();
   }
 
-  function handleKeyDown(event, editor) {
-    if (editor === undefined) {
+  function createTypingHandlers(delay, callback) {
+    let typingTimer;
+
+    function handleKeyUp(event, editor) {
+      if (editor === undefined) {
+        return;
+      }
+
+      clearTimeout(typingTimer);
+
+      const blacklist = [
+        'ArrowLeft',
+        'ArrowRight',
+        'ArrowUp',
+        'ArrowDown',
+        'Escape',
+        'Tab',
+        'Control',
+        'Alt',
+        'Meta',
+      ];
+
+      if (blacklist.includes(event.key)) {
+        return;
+      }
+
+      typingTimer = setTimeout(() => doneTyping(event, editor), delay);
+    }
+
+    function handleKeyDown(event, editor) {
+      if (editor === undefined) {
+        return;
+      }
+
+      clearTimeout(typingTimer);
+
+      if (!suggestion.value) {
+        return;
+      }
+
+      const firstChar = suggestion.value[0];
+      const suggestionNode = editor.dom.get('ai-suggestion');
+
+      if (event.key === 'Shift') {
+        return;
+      }
+
+      if (event.key === 'Tab') {
+        event.preventDefault();
+        const suggestionNode = editor.dom.get('ai-suggestion');
+        suggestionNode.remove();
+
+        editor.execCommand('mceInsertContent', false, suggestion.value);
+
+        suggestion.value = '';
+        return;
+      }
+
+      if (event.key === 'Escape' || event.key !== firstChar) {
+        suggestionNode.remove();
+        suggestion.value = '';
+        editor.execCommand('mceInsertContent', false, '');
+
+        return;
+      }
+
+      suggestion.value = suggestion.value.slice(1);
+      suggestionNode.textContent = suggestion.value;
+    }
+
+    function doneTyping(event, editor) {
+      callback(event, editor);
+    }
+
+    return {
+      handleKeyUp,
+      handleKeyDown,
+    };
+  }
+
+  const { handleKeyUp, handleKeyDown } = createTypingHandlers(1000, async (event, editor) => {
+    if (!editorValue.value || suggestion.value || enablePredictiveText.value === false) {
       return;
     }
 
-    clearTimeout(typingTimer);
+    const res = await fetch(`${import.meta.env.VITE_API_URL}/complete`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ input: editorValue.value }),
+    });
+
+    if (!res.ok) {
+      return;
+    }
+
+    const data = await res.json();
+    const suggestionText = data.response;
+
+    const { anchorNode, anchorOffset } = editor.selection.getSel();
+
+    suggestion.value = suggestionText;
+
+    const suggestionNode = editor.dom.get('ai-suggestion');
+
+    if (suggestionNode) {
+      suggestionNode.remove();
+    }
+
+    editor.execCommand(
+      'mceInsertContent',
+      false,
+      `<span id="ai-suggestion" style="opacity: 0.7;">${suggestionText}</span>`
+    );
+
+    playBloopSound();
+
+    editor.selection.setCursorLocation(anchorNode, anchorOffset);
+  });
+
+  function handleBlur(event, editor) {
+    if (editor === undefined) {
+      return;
+    }
 
     if (!suggestion.value) {
       return;
     }
 
-    const firstChar = suggestion.value[0];
     const suggestionNode = editor.dom.get('ai-suggestion');
-
-    if (event.key === 'Shift') {
-      return;
-    }
-
-    if (event.key === 'Tab') {
-      event.preventDefault();
-      const suggestionNode = editor.dom.get('ai-suggestion');
-      suggestionNode.remove();
-
-      editor.execCommand('mceInsertContent', false, suggestion.value);
-
-      suggestion.value = '';
-      return;
-    }
-
-    if (event.key === 'Escape' || event.key !== firstChar) {
-      suggestionNode.remove();
-      suggestion.value = '';
-      editor.execCommand('mceInsertContent', false, '');
-
-      return;
-    }
-
-    suggestion.value = suggestion.value.slice(1);
-    suggestionNode.textContent = suggestion.value;
-  }
-
-  function doneTyping(event, editor) {
-    callback(event, editor);
-  }
-
-  return {
-    handleKeyUp,
-    handleKeyDown,
-  };
-}
-
-const { handleKeyUp, handleKeyDown } = createTypingHandlers(1000, async (event, editor) => {
-  if (!editorValue.value || suggestion.value || enablePredictiveText.value === false) {
-    return;
-  }
-
-  const res = await fetch(`${import.meta.env.VITE_API_URL}/complete`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ input: editorValue.value }),
-  });
-
-  if (!res.ok) {
-    return;
-  }
-
-  const data = await res.json();
-  const suggestionText = data.response;
-
-  const { anchorNode, anchorOffset } = editor.selection.getSel();
-
-  suggestion.value = suggestionText;
-
-  const suggestionNode = editor.dom.get('ai-suggestion');
-
-  if (suggestionNode) {
     suggestionNode.remove();
+    suggestion.value = '';
   }
 
-  editor.execCommand(
-    'mceInsertContent',
-    false,
-    `<span id="ai-suggestion" style="opacity: 0.7;">${suggestionText}</span>`
-  );
+  const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
 
-  playBloopSound();
-
-  editor.selection.setCursorLocation(anchorNode, anchorOffset);
-});
-
-function handleBlur(event, editor) {
-  if (editor === undefined) {
-    return;
+  function handlePromptSidebarClose() {
+    showSidebar.value = false;
   }
-
-  if (!suggestion.value) {
-    return;
-  }
-
-  const suggestionNode = editor.dom.get('ai-suggestion');
-  suggestionNode.remove();
-  suggestion.value = '';
-}
-
-const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
 </script>
 
 <template>
+  <PromptSidebar :show="showSidebar" @close="handlePromptSidebarClose" />
   <main>
     <div id="container" class="container">
       <Editor
@@ -171,7 +178,7 @@ const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
         api-key="no-api-key"
         :init="{
           toolbar:
-            'undo redo | styles | bold italic | alignleft aligncenter alignright alignjustify | outdent indent | disablePredictiveText',
+            'undo redo | styles | bold italic | alignleft aligncenter alignright alignjustify | outdent indent | disablePredictiveText showPromptSidebar',
           menubar: false,
           promotion: false,
           branding: false,
@@ -192,6 +199,13 @@ const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
                 api.setActive(enablePredictiveText);
               },
             });
+
+            editor.ui.registry.addToggleButton('showPromptSidebar', {
+              icon: 'ai-prompt',
+              onAction: () => {
+                showSidebar = !showSidebar;
+              },
+            });
           },
         }"
         :inline="true"
@@ -206,38 +220,27 @@ const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
 </template>
 
 <style scoped>
-main {
-  height: 100%;
-  padding: 3rem 1rem;
-}
+  main {
+    height: 100%;
+    padding: 3rem 1rem;
+  }
 
-.container {
-  width: 100%;
-  height: 100%;
-  position: relative;
-}
+  .container {
+    width: 100%;
+    height: 100%;
+  }
 
-.textarea {
-  position: relative;
-  border: 1px solid var(--border-color);
-  border-radius: 0.5rem;
-  padding: 0.75rem;
-  width: 100%;
-  height: 100%;
-  resize: none;
-}
+  .textarea {
+    position: relative;
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    width: 100%;
+    height: 100%;
+    resize: none;
+  }
 
-.container-mirror {
-  position: absolute;
-  top: 0;
-  left: 0;
-  height: 100%;
-  width: 100%;
-  overflow: hidden;
-  color: red;
-}
-
-.ai-suggestion {
-  opacity: 0.5;
-}
+  .ai-suggestion {
+    opacity: 0.5;
+  }
 </style>
