@@ -9,9 +9,9 @@ const router = createRouter({
       component: () => import('../views/HomeView.vue'),
     },
     {
-      path: '/autocomplete',
-      name: 'autocomplete',
-      component: () => import('../views/AutocompleteView.vue'),
+      path: '/ai-editor',
+      name: 'ai-editor',
+      component: () => import('../views/AIEditorView.vue'),
     },
   ],
 });

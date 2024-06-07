@@ -18,30 +18,36 @@ class AnthropicOptionsSetup(IConfiguration config) : IConfigureOptions<Anthropic
 
 interface IAnthropicService
 {
-  Task<string> GenerateResponseAsync(string userInput);
+  IAsyncEnumerable<string> GenerateResponseAsync(string userInput, string existingContent);
   Task<string> GenerateCompletionAsync(string userInput);
 }
 
 class AnthropicService(HttpClient httpClient, IOptions<AnthropicOptions> options, IPromptBuilder builder) : IAnthropicService
 {
   private readonly JsonSerializerOptions _serializerOptions = new() { PropertyNameCaseInsensitive = true };
-  private const string Model = AnthropicModels.Claude3Haiku;
   private readonly AnthropicClient _client = new(options.Value.Key, httpClient);
   private readonly IPromptBuilder _promptBuilder = builder;
 
-  public async Task<string> GenerateResponseAsync(string userInput)
+  public async IAsyncEnumerable<string> GenerateResponseAsync(string userInput, string existingContent)
   {
+    var prompt = _promptBuilder.CreateWritingAssistantPrompt(userInput, existingContent);
+
     var msgParams = new MessageParameters()
     {
-      Messages = [new(RoleType.User, userInput)],
-      Model = Model,
+      Messages = [new(RoleType.User, prompt)],
+      Model = AnthropicModels.Claude3Sonnet,
       MaxTokens = 1024,
-      Stream = false,
-      Temperature = 0.7m,
+      Stream = true,
+      Temperature = 1m,
     };
 
-    var response = await _client.Messages.GetClaudeMessageAsync(msgParams);
-    return response.Message;
+    await foreach (var response in _client.Messages.StreamClaudeMessageAsync(msgParams))
+    {
+      if (response.Delta is not null)
+      {
+        yield return response.Delta.Text;
+      }
+    }
   }
 
   public async Task<string> GenerateCompletionAsync(string userInput)
@@ -51,7 +57,7 @@ class AnthropicService(HttpClient httpClient, IOptions<AnthropicOptions> options
     var msgParams = new MessageParameters()
     {
       Messages = [new(RoleType.User, prompt)],
-      Model = Model,
+      Model = AnthropicModels.Claude3Haiku,
       MaxTokens = 1024,
       Stream = false,
       Temperature = 1.0m,
