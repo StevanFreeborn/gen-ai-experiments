@@ -4,6 +4,7 @@ interface IPromptBuilder
 {
   string CreateAutoCompletePrompt(string userInput);
   string CreateWritingAssistantPrompt(string userInput, string existingContent);
+  string CreateControlToCitationMappingPrompt(string controlText, List<Citation> citations);
 }
 
 class PromptBuilder : IPromptBuilder
@@ -70,5 +71,30 @@ class PromptBuilder : IPromptBuilder
     Remember, properly structure your HTML ensuring that all tags are opened and closed. DO NOT include any partial or incomplete HTML in your response.
 
     Respond only with your properly structured HTML writing completion. Do not include any other text, notes, or explanations in your response.
+  """;
+
+  public string CreateControlToCitationMappingPrompt(string controlText, List<Citation> citations) => @$"""
+    You will be given the text of a control and a list of citations. Your task is to determine which citations, if any, map to or are relevant to the given control text.
+
+    The control text will be provided inside <control_text> tags like this:
+    <control_text>
+    {controlText}
+    </control_text>
+
+    The list of possible citations will be provided inside <citations> tags, with each individual citation inside its own <citation> tag like this:
+    <citations>
+    {string.Join("\n", citations.Select(c => c.ToString()))}
+    </citations>
+
+    Please read carefully the control text and each citation text. You DO NOT need to restate them in your output.
+
+    Finally a JSON object that contains a `mappings` property whose value is an array of the ids as numbers of the citations you determined map to the control text. The id of each citation is provided in the ""id"" attribute of the <citation> tag. If you determine that no citations map to the control, simply set the `mappings` property to `null`.
+
+    For example:
+    ```json
+    {{ ""mappings"": [1,2,3] }}
+    ```
+
+    Remember DO NOT provide any more output besides the JSON object.
   """;
 }
