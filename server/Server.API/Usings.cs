@@ -8,3 +8,4 @@ global using Microsoft.Extensions.Options;
 
 global using Server.API.Builders;
 global using Server.API.Services;
+global using Server.API.Models;

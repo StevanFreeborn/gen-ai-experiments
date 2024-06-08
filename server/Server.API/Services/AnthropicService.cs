@@ -20,6 +20,8 @@ interface IAnthropicService
 {
   IAsyncEnumerable<string> GenerateResponseAsync(string userInput, string existingContent);
   Task<string> GenerateCompletionAsync(string userInput);
+
+  Task<List<int>> MapControlToCitationsAsync(Control control, List<Citation> citations);
 }
 
 class AnthropicService(HttpClient httpClient, IOptions<AnthropicOptions> options, IPromptBuilder builder) : IAnthropicService
@@ -68,6 +70,8 @@ class AnthropicService(HttpClient httpClient, IOptions<AnthropicOptions> options
     return result.Completion;
   }
 
+
+
   private CompletionResult ParseCompletion(string completion)
   {
     try
@@ -79,9 +83,34 @@ class AnthropicService(HttpClient httpClient, IOptions<AnthropicOptions> options
       return new CompletionResult();
     }
   }
-}
 
-record CompletionResult
-{
-  public string Completion { get; init; } = string.Empty;
+  public async Task<List<int>> MapControlToCitationsAsync(Control control, List<Citation> citations)
+  {
+    var prompt = _promptBuilder.CreateControlToCitationMappingPrompt(control.Name, citations);
+
+    var msgParams = new MessageParameters()
+    {
+      Messages = [new(RoleType.User, prompt)],
+      Model = AnthropicModels.Claude3Haiku,
+      MaxTokens = 1024,
+      Stream = false,
+      Temperature = 0m,
+    };
+
+    var response = await _client.Messages.GetClaudeMessageAsync(msgParams);
+    var result = ParseMapping(response.Message);
+    return result.Mappings;
+  }
+
+  private MappingResult ParseMapping(string mapping)
+  {
+    try
+    {
+      return JsonSerializer.Deserialize<MappingResult>(mapping, _serializerOptions) ?? new MappingResult([]);
+    }
+    catch (Exception ex) when (ex is JsonException)
+    {
+      return new MappingResult([]);
+    }
+  }
 }
