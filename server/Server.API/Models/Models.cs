@@ -24,3 +24,36 @@ record Citation(decimal Id, string Guidance)
     </citation>
   """;
 }
+
+class ChromaOptions
+{
+  public string BaseUrl { get; set; } = string.Empty;
+}
+
+class ChromaOptionsSetup(IConfiguration config) : IConfigureOptions<ChromaOptions>
+{
+  private const string SectionName = nameof(ChromaOptions);
+  private readonly IConfiguration _config = config;
+
+  public void Configure(ChromaOptions options)
+  {
+    _config.GetSection(SectionName).Bind(options);
+  }
+}
+
+class OllamaTextEmbeddingOptions
+{
+  public string BaseUrl { get; set; } = string.Empty;
+  public string ModelId { get; set; } = string.Empty;
+}
+
+class OllamaTextEmbeddingOptionsSetup(IConfiguration config) : IConfigureOptions<OllamaTextEmbeddingOptions>
+{
+  private const string SectionName = nameof(OllamaTextEmbeddingOptions);
+  private readonly IConfiguration _config = config;
+
+  public void Configure(OllamaTextEmbeddingOptions options)
+  {
+    _config.GetSection(SectionName).Bind(options);
+  }
+}
