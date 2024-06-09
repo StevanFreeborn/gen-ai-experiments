@@ -109,3 +109,5 @@ app.Run();
 record WritingAssistanceRequest(string Input, string ExistingContent);
 
 record AutoCompleteRequest(string Input);
+
+public partial class Program { }
