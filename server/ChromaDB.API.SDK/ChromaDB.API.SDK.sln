@@ -1,0 +1,28 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChromaDB.API.SDK", "ChromaDB.API.SDK\ChromaDB.API.SDK.csproj", "{EA9CD1A2-89E9-488E-BC30-86BF0FA81F0D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChromaDB.API.SDK.Tests", "ChromaDB.API.SDK.Tests\ChromaDB.API.SDK.Tests.csproj", "{C96D47C7-30CE-4D9D-AF05-CE1020539483}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{EA9CD1A2-89E9-488E-BC30-86BF0FA81F0D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EA9CD1A2-89E9-488E-BC30-86BF0FA81F0D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EA9CD1A2-89E9-488E-BC30-86BF0FA81F0D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EA9CD1A2-89E9-488E-BC30-86BF0FA81F0D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C96D47C7-30CE-4D9D-AF05-CE1020539483}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C96D47C7-30CE-4D9D-AF05-CE1020539483}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C96D47C7-30CE-4D9D-AF05-CE1020539483}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C96D47C7-30CE-4D9D-AF05-CE1020539483}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
