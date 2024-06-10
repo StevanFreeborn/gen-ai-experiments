@@ -9,6 +9,9 @@
         <li>
           <RouterLink to="/ai-editor">AI-Enhanced Editor</RouterLink>
         </li>
+        <li>
+          <RouterLink to="/data-import">Data Import</RouterLink>
+        </li>
       </ul>
     </nav>
   </main>

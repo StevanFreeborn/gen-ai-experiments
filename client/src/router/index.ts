@@ -13,6 +13,11 @@ const router = createRouter({
       name: 'ai-editor',
       component: () => import('../views/AIEditorView.vue'),
     },
+    {
+      path: '/data-import',
+      name: 'data-import',
+      component: () => import('../views/DataImportView.vue'),
+    },
   ],
 });
 
