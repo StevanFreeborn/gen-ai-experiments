@@ -5,6 +5,7 @@ interface IPromptBuilder
   string CreateAutoCompletePrompt(string userInput);
   string CreateWritingAssistantPrompt(string userInput, string existingContent);
   string CreateControlToCitationMappingPrompt(string controlText, List<Citation> citations);
+  string CreateControlToCitationMappingPromptRevised(string controlText, List<Citation> citations);
 }
 
 class PromptBuilder : IPromptBuilder
@@ -94,6 +95,46 @@ class PromptBuilder : IPromptBuilder
     ```json
     {{ ""mappings"": [1,2,3] }}
     ```
+
+    Remember DO NOT provide any more output besides the JSON object.
+  """;
+
+  public string CreateControlToCitationMappingPromptRevised(string controlText, List<Citation> citations) => @$"""
+    You will be given the text of a control and a list of citations. Your task is to determine which citations, if any, map to or are relevant to the given control text.
+
+    The control text will be provided inside <control_text> tags like this:
+    <control_text>
+      Check the accuracy of restricted data.
+    </control_text>
+
+    The list of possible citations will be provided inside <citations> tags, with each individual citation inside its own <citation> tag like this:
+    <citations>
+      <citation id=""1"">
+        Confirms to the greatest extent practicable upon collection or creation of personally identifiable information (PII), the accuracy, relevance, timeliness, and completeness of that information;
+      </citation>
+      <citation id=""2"">
+        Checks for, and corrects as necessary, any inaccurate or outdated PII used by its programs or systems [Assignment: organization-defined frequency]; and
+      </citation>
+    </citations>
+
+    You will return a JSON object that contains a `mappings` property whose value is an array of the ids as numbers of the citations you determined map to the control text. The id of each citation is provided in the ""id"" attribute of the <citation> tag. If you determine that no citations map to the control, simply set the `mappings` property to `null`.
+
+    For example:
+    ```json
+    {{ ""mappings"": [1,2] }}
+    ```
+
+    Here are the citations you will be working with:
+    <citations>
+      {string.Join("\n", citations.Select(c => c.ToString()))}
+    </citations>
+
+    Here is the control text you will be working with:
+    <control_text>
+      {controlText}
+    </control_text>
+
+    Please read carefully the control text and each citation text. Think about each citation step by step to determine if it maps to the control. You DO NOT need to restate them in your output.
 
     Remember DO NOT provide any more output besides the JSON object.
   """;
