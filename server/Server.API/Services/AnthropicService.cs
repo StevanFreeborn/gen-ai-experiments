@@ -72,7 +72,7 @@ class AnthropicService(HttpClient httpClient, IOptions<AnthropicOptions> options
 
   public async Task<List<int>> MapControlToCitationsAsync(Control control, List<Citation> citations)
   {
-    var prompt = _promptBuilder.CreateControlToCitationMappingPrompt(control.Name, citations);
+    var prompt = _promptBuilder.CreateControlToCitationMappingPromptRevised(control.Name, citations);
 
     var msgParams = new MessageParameters()
     {
