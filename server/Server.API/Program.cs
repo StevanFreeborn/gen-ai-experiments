@@ -38,8 +38,12 @@ builder.Services.AddTransient<ITextEmbeddingGenerationService, OllamaTextEmbeddi
 
 builder.Services.AddTransient<ISemanticTextMemory, SemanticTextMemory>();
 
-// TODO: Add option to enable embeddings generation
-// builder.Services.AddHostedService<EmbeddingsService>();
+var generateEmbeddings = builder.Configuration.GetValue<bool>("GenerateEmbeddings", false);
+
+if (generateEmbeddings)
+{
+  builder.Services.AddHostedService<GenerateEmbeddingsService>();
+}
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -99,6 +103,21 @@ app.MapPost("/semantic-search", async ([FromBody] string query, [FromServices] I
 
   return new { Citations = citations };
 });
+
+
+app
+  .MapPost("/analyze-import", async ([FromForm] string hasHeader, IFormFile importFile, [FromServices] IAnthropicService anthropicService) =>
+  {
+    var fileStream = importFile.OpenReadStream();
+    var reader = new StreamReader(fileStream);
+    var fileContent = reader.ReadToEnd();
+    var rows = fileContent.Split("\n");
+    var sampleRowNum = hasHeader == "on" ? 2 : 1;
+    var sampleRows = rows.Take(sampleRowNum).ToList();
+    var analysis = await anthropicService.GenerateImportAnalysisAsync(sampleRows);
+    return Results.Ok(analysis);
+  })
+  .DisableAntiforgery();
 
 
 app.UseCors();

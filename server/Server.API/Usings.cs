@@ -1,4 +1,5 @@
 global using System.Text.Json;
+global using System.Text.Json.Serialization;
 
 global using Anthropic.SDK;
 global using Anthropic.SDK.Constants;

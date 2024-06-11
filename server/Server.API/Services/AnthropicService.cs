@@ -20,8 +20,8 @@ interface IAnthropicService
 {
   IAsyncEnumerable<string> GenerateResponseAsync(string userInput, string existingContent);
   Task<string> GenerateCompletionAsync(string userInput);
-
   Task<List<int>> MapControlToCitationsAsync(Control control, List<Citation> citations);
+  Task<List<ColumnResult>> GenerateImportAnalysisAsync(List<string> sampleImportRows);
 }
 
 class AnthropicService(HttpClient httpClient, IOptions<AnthropicOptions> options, IPromptBuilder builder) : IAnthropicService
@@ -70,20 +70,6 @@ class AnthropicService(HttpClient httpClient, IOptions<AnthropicOptions> options
     return result.Completion;
   }
 
-
-
-  private CompletionResult ParseCompletion(string completion)
-  {
-    try
-    {
-      return JsonSerializer.Deserialize<CompletionResult>(completion, _serializerOptions) ?? new CompletionResult();
-    }
-    catch (Exception ex) when (ex is JsonException)
-    {
-      return new CompletionResult();
-    }
-  }
-
   public async Task<List<int>> MapControlToCitationsAsync(Control control, List<Citation> citations)
   {
     var prompt = _promptBuilder.CreateControlToCitationMappingPrompt(control.Name, citations);
@@ -100,6 +86,48 @@ class AnthropicService(HttpClient httpClient, IOptions<AnthropicOptions> options
     var response = await _client.Messages.GetClaudeMessageAsync(msgParams);
     var result = ParseMapping(response.Message);
     return result.Mappings;
+  }
+
+  public async Task<List<ColumnResult>> GenerateImportAnalysisAsync(List<string> sampleImportRows)
+  {
+    var prompt = _promptBuilder.CreateImportAnalysisPrompt(sampleImportRows);
+
+    var msgParams = new MessageParameters()
+    {
+      Messages = [new(RoleType.User, prompt)],
+      Model = AnthropicModels.Claude3Haiku,
+      MaxTokens = 1024,
+      Stream = false,
+      Temperature = 0m,
+    };
+
+    var response = await _client.Messages.GetClaudeMessageAsync(msgParams);
+    var result = ParseColumnResults(response.Message);
+    return result;
+  }
+
+  private List<ColumnResult> ParseColumnResults(string importAnalysis)
+  {
+    try
+    {
+      return JsonSerializer.Deserialize<List<ColumnResult>>(importAnalysis, _serializerOptions) ?? [];
+    }
+    catch (Exception ex) when (ex is JsonException)
+    {
+      return [];
+    }
+  }
+
+  private CompletionResult ParseCompletion(string completion)
+  {
+    try
+    {
+      return JsonSerializer.Deserialize<CompletionResult>(completion, _serializerOptions) ?? new CompletionResult();
+    }
+    catch (Exception ex) when (ex is JsonException)
+    {
+      return new CompletionResult();
+    }
   }
 
   private MappingResult ParseMapping(string mapping)

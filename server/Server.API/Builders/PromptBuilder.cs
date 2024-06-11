@@ -5,6 +5,7 @@ interface IPromptBuilder
   string CreateAutoCompletePrompt(string userInput);
   string CreateWritingAssistantPrompt(string userInput, string existingContent);
   string CreateControlToCitationMappingPrompt(string controlText, List<Citation> citations);
+  string CreateImportAnalysisPrompt(List<string> rows);
 }
 
 class PromptBuilder : IPromptBuilder
@@ -96,5 +97,78 @@ class PromptBuilder : IPromptBuilder
     ```
 
     Remember DO NOT provide any more output besides the JSON object.
+  """;
+
+  public string CreateImportAnalysisPrompt(List<string> rows) => @$"""
+    I will provide you with a CSV file containing data:
+
+    <csv_file>
+    {string.Join("\n", rows)}
+    </csv_file>
+
+    Your task is to summarize the structure and shape of this CSV data in a JSON object. The JSON object should include the following information for each column in the CSV:
+    - The name of the column (property)
+    - A brief description of what that column represents
+    - The data type of the values in that column
+
+    Here are the steps to complete this task:
+
+    1. Parse the CSV data and identify the column names.
+    2. For each column:
+      a. Determine the data type by inspecting the values. If the column contains multiple data types, use the most prevalent one.
+      b. Select ONLY from the following types:
+          1. Date - Use for Date or Date + Time values such as 06-10-2024
+          2. List - Use for categorical or label data such as Status, Category, Type, Language, Country, etc.
+          4. Text - Use for alphanumeric characters such as HTML markup, json, multi-line text, emails, phone numbers, etc.
+          5. Number - Use for any type of numeric value
+      b. Come up with a concise description of what the column likely represents based on its name and values.
+    3. If you are given 2 rows of data, treat first row as headers and use column names as names. If you are given a single row of data, generate names based on the values in the first row.
+    4. Construct a JSON array with the following structure:
+      ```json
+      [
+        {{
+          ""name"": ""column1_name"",
+          ""description"": ""column1_description"",
+          ""type"": ""column1_type""
+        }},
+        {{
+          ""name"": ""column2_name"", 
+          ""description"": ""column2_description"",
+          ""type"": ""column2_type""
+        }},
+        ...
+      ]
+      ```
+    5. Output the complete JSON array.
+
+    For example, if the input CSV looked like:
+
+    ```
+    name,age,city
+    Alice,25,New York
+    Bob,30,Chicago
+    Charlie,35,Houston
+    ```
+
+    The expected JSON summary would be:
+    [
+      {{
+        ""name"": ""name"",
+        ""description"": ""The first name of the person"",
+        ""type"": ""string""
+      }},
+      {{
+        ""name"": ""age"",
+        ""description"": ""The age of the person in years"",
+        ""type"": ""integer""
+      }},
+      {{
+        ""name"": ""city"",
+        ""description"": ""The city where the person lives"",
+        ""type"": ""string""
+      }}
+    ]
+
+    Remember, ONLY output the JSON array. DO NOT provide any other output.
   """;
 }

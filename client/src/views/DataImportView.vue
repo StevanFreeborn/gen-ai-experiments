@@ -1,4 +1,8 @@
 <script setup lang="ts">
+  import { ref } from 'vue';
+
+  const response = ref<string | null>(null);
+
   function validateCsv(csvData: string, hasHeader: boolean) {
     const rows = csvData.split('\n');
 
@@ -15,7 +19,7 @@
 
         if (header.length !== row.length) {
           alert(
-            'File is invalid. The number of columns in the header does not match the number of columns in the data row.'
+            `File is invalid. The number of columns in the header does not match the number of columns in the data row. ${i}`
           );
           return;
         }
@@ -26,7 +30,7 @@
   async function handleSubmit(event: Event) {
     const formDate = new FormData(event.target as HTMLFormElement);
     const importFile = formDate.get('importFile');
-    const hasHeader = formDate.get('hasHeader');
+    const hasHeader = formDate.get('hasHeader') === 'on';
 
     if (importFile instanceof File) {
       if (importFile.type !== 'text/csv') {
@@ -37,40 +41,44 @@
       const reader = new FileReader();
 
       reader.onload = event => {
-        if (
-          event.target !== null &&
-          typeof event.target.result === 'string' &&
-          typeof hasHeader === 'boolean'
-        ) {
+        if (event.target !== null && typeof event.target.result === 'string') {
           validateCsv(event.target.result, hasHeader);
         }
       };
 
       reader.readAsText(importFile);
 
-      // TODO: Send the file to the server for processing
-      // const uploadResponse = await fetch(`${process.env.VITE_API_URL}/analyze-import`, {
-      //   method: 'POST',
-      //   body: formDate,
-      // });
+      const uploadResponse = await fetch(`${import.meta.env.VITE_API_URL}/analyze-import`, {
+        method: 'POST',
+        body: formDate,
+      });
+
+      if (uploadResponse.ok === false) {
+        return;
+      }
+
+      const json = await uploadResponse.json();
+      response.value = json;
     }
   }
 </script>
 
 <template>
   <main>
-    <form @submit.prevent="handleSubmit">
+    <form @submit.prevent="handleSubmit" v-if="response === null">
       <div class="form-col-group">
         <label for="importFile">Import File:</label>
         <input type="file" name="importFile" id="importFile" accept=".csv" />
       </div>
       <div class="form-row-group">
-        <input type="checkbox" name="hasHeader" id="hasHeader" />
-
+        <input type="checkbox" name="hasHeader" id="hasHeader" checked />
         <label for="hasHeader">File has header row</label>
       </div>
       <button type="submit">Upload</button>
     </form>
+    <div v-else class="response-container">
+      <pre>{{ response }}</pre>
+    </div>
   </main>
 </template>
 
@@ -79,7 +87,7 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
+    margin: 1rem;
     height: 100%;
   }
 
@@ -87,6 +95,7 @@
     display: flex;
     flex-direction: column;
     gap: 1rem;
+    flex: 1;
 
     & button[type='submit'] {
       padding: 0.5rem 1rem;
@@ -112,5 +121,12 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
+  }
+
+  .response-container {
+    padding: 1rem;
+    border: 1px solid var(--primary-color);
+    border-radius: 0.25rem;
+    background-color: var(--primary-color-light);
   }
 </style>

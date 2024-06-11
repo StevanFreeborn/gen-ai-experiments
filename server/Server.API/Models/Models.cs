@@ -25,6 +25,17 @@ record Citation(decimal Id, string Guidance)
   """;
 }
 
+record ColumnResult(string Name, string Description, string Type);
+
+[JsonConverter(typeof(JsonStringEnumConverter))]
+enum ColumnType
+{
+  Text,
+  Number,
+  Date,
+  List,
+}
+
 class ChromaOptions
 {
   public string BaseUrl { get; set; } = string.Empty;
