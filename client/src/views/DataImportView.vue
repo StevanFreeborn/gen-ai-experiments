@@ -16,9 +16,12 @@
 
   const isAnalyzing = ref(false);
   const isCreatingApp = ref(false);
+  const isImportingData = ref(false);
 
+  const importFile = ref<File | null>(null);
   const importAnalysis = ref<ImportAnalysis | null>(null);
   const createdAppUrl = ref<string | null>(null);
+  const reportUrl = ref<string | null>(null);
 
   function validateCsv(csvData: string, hasHeader: boolean) {
     const rows = csvData.split('\n');
@@ -49,11 +52,11 @@
   async function handleSubmit(event: Event) {
     isAnalyzing.value = true;
     const formDate = new FormData(event.target as HTMLFormElement);
-    const importFile = formDate.get('importFile');
-    const hasHeader = formDate.get('hasHeader') === 'on';
+    const importFileField = formDate.get('importFile');
+    const hasHeaderField = formDate.get('hasHeader') === 'on';
 
-    if (importFile instanceof File) {
-      if (importFile.type !== 'text/csv') {
+    if (importFileField instanceof File) {
+      if (importFileField.type !== 'text/csv') {
         alert('Invalid file type. Please upload a CSV file.');
         isAnalyzing.value = false;
         return;
@@ -65,7 +68,7 @@
 
       reader.onload = event => {
         if (event.target !== null && typeof event.target.result === 'string') {
-          isValid = validateCsv(event.target.result, hasHeader);
+          isValid = validateCsv(event.target.result, hasHeaderField);
         }
       };
 
@@ -74,6 +77,8 @@
           isAnalyzing.value = false;
           return;
         }
+
+        importFile.value = importFileField;
 
         const analyzeResponse = await fetch(`${import.meta.env.VITE_API_URL}/analyze-import`, {
           method: 'POST',
@@ -90,7 +95,7 @@
         isAnalyzing.value = false;
       };
 
-      reader.readAsText(importFile);
+      reader.readAsText(importFileField);
     }
   }
 
@@ -114,6 +119,52 @@
     const json = await createAppResponse.json();
     createdAppUrl.value = json.url;
     isCreatingApp.value = false;
+  }
+
+  async function handleImportDataButtonClick() {
+    isImportingData.value = true;
+
+    const formDate = new FormData();
+
+    if (importFile.value === null) {
+      alert('No import file selected.');
+      isImportingData.value = false;
+      return;
+    }
+
+    if (importAnalysis.value === null) {
+      alert('No import analysis data.');
+      isImportingData.value = false;
+      return;
+    }
+
+    if (createdAppUrl.value === null) {
+      alert('No app created.');
+      isImportingData.value = false;
+      return;
+    }
+
+    formDate.append('importFile', importFile.value);
+    formDate.append('appUrl', createdAppUrl.value);
+    formDate.append(
+      'importAnalysisFile',
+      new Blob([JSON.stringify(importAnalysis.value)], { type: 'application/json' })
+    );
+
+    const importDataResponse = await fetch(`${import.meta.env.VITE_API_URL}/create-import`, {
+      method: 'POST',
+      body: formDate,
+    });
+
+    if (importDataResponse.ok === false) {
+      alert('Failed to import data.');
+      isImportingData.value = false;
+      return;
+    }
+
+    const json = await importDataResponse.json();
+    reportUrl.value = json.url;
+    isImportingData.value = false;
   }
 </script>
 
@@ -160,6 +211,21 @@
       <p v-if="createdAppUrl !== null">
         App created successfully. You can view it <a :href="createdAppUrl" target="_blank">here</a>.
       </p>
+      <div v-if="createdAppUrl !== null" class="create-import-container">
+        <p>Would you like to import the data now?</p>
+        <button
+          type="button"
+          @click="handleImportDataButtonClick"
+          :disabled="isImportingData === true"
+        >
+          <span v-if="isImportingData">Importing...</span>
+          <span v-else>Import Data</span>
+        </button>
+        <p v-if="reportUrl !== null">
+          Import successful. You can view the data in a report
+          <a :href="reportUrl" target="_blank">here</a>.
+        </p>
+      </div>
     </div>
   </main>
 </template>
@@ -229,6 +295,12 @@
 
     & a:hover {
       text-decoration: underline;
+    }
+
+    & .create-import-container {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
     }
   }
 

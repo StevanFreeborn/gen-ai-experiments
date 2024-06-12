@@ -69,40 +69,43 @@ app.UseHttpsRedirection();
 
 app.MapGet("/", () => new { Message = "Hello, World!" });
 
-app.MapPost("/generate", async ([FromBody] WritingAssistanceRequest request, HttpContext context, [FromServices] IAnthropicService service) =>
-{
-  context.Response.ContentType = "text/event-stream; charset=utf-8";
-  context.Response.Headers.Append("Cache-Control", "no-cache");
-  context.Response.Headers.Append("Connection", "keep-alive");
-
-  await foreach (var response in service.GenerateResponseAsync(request.Input, request.ExistingContent))
+app
+  .MapPost("/generate", async ([FromBody] WritingAssistanceRequest request, HttpContext context, [FromServices] IAnthropicService service) =>
   {
-    // write event for each response to the stream
-    var data = Encoding.UTF8.GetBytes($"data: <response>{response}</response>\n\n");
-    await context.Response.Body.WriteAsync(data);
-    await context.Response.Body.FlushAsync();
-  }
-});
+    context.Response.ContentType = "text/event-stream; charset=utf-8";
+    context.Response.Headers.Append("Cache-Control", "no-cache");
+    context.Response.Headers.Append("Connection", "keep-alive");
 
-app.MapPost("/complete", async ([FromBody] AutoCompleteRequest request, [FromServices] IAnthropicService service) =>
-{
-  var response = await service.GenerateCompletionAsync(request.Input);
-  return new { Response = response };
-});
+    await foreach (var response in service.GenerateResponseAsync(request.Input, request.ExistingContent))
+    {
+      // write event for each response to the stream
+      var data = Encoding.UTF8.GetBytes($"data: <response>{response}</response>\n\n");
+      await context.Response.Body.WriteAsync(data);
+      await context.Response.Body.FlushAsync();
+    }
+  });
 
-app.MapPost("/semantic-search", async ([FromBody] string query, [FromServices] ISemanticTextMemory memory) =>
-{
-  var results = memory.SearchAsync(collection: "citations", query, 20);
-
-  var citations = new List<MemoryQueryResult>();
-
-  await foreach (var result in results)
+app
+  .MapPost("/complete", async ([FromBody] AutoCompleteRequest request, [FromServices] IAnthropicService service) =>
   {
-    citations.Add(result);
-  }
+    var response = await service.GenerateCompletionAsync(request.Input);
+    return new { Response = response };
+  });
 
-  return new { Citations = citations };
-});
+app
+  .MapPost("/semantic-search", async ([FromBody] string query, [FromServices] ISemanticTextMemory memory) =>
+  {
+    var results = memory.SearchAsync(collection: "citations", query, 20);
+
+    var citations = new List<MemoryQueryResult>();
+
+    await foreach (var result in results)
+    {
+      citations.Add(result);
+    }
+
+    return new { Citations = citations };
+  });
 
 
 app
@@ -124,6 +127,21 @@ app.MapPost("/create-app", async ([FromBody] ImportAnalysisResult analysis, [Fro
   var appUrl = await onspringService.CreateAppAsync(analysis);
   return Results.Ok(new { Url = appUrl });
 });
+
+app
+  .MapPost("/create-import", async (IFormFile importAnalysisFile, [FromForm] string appUrl, IFormFile importFile, [FromServices] IOnspringService onspringService) =>
+  {
+    var importAnalysis = await JsonSerializer.DeserializeAsync<ImportAnalysisResult>(importAnalysisFile.OpenReadStream(), new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+    if (importAnalysis is null)
+    {
+      return Results.BadRequest("Unable to parse import analysis file.");
+    }
+
+    var reportUrl = await onspringService.CreateImportAsync(importAnalysis, appUrl, importFile);
+    return Results.Ok(new { Url = reportUrl });
+  })
+  .DisableAntiforgery();
 
 app.UseCors();
 
