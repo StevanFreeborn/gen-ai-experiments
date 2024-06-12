@@ -2,13 +2,13 @@
 
 namespace Server.API.Services;
 
-class EmbeddingsService(
+class GenerateEmbeddingsService(
   IServiceProvider serviceProvider,
-  ILogger<EmbeddingsService> logger
+  ILogger<GenerateEmbeddingsService> logger
 ) : IHostedService
 {
   private readonly IServiceProvider _serviceProvider = serviceProvider;
-  private readonly ILogger<EmbeddingsService> _logger = logger;
+  private readonly ILogger<GenerateEmbeddingsService> _logger = logger;
 
   public async Task StartAsync(CancellationToken cancellationToken)
   {
