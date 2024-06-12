@@ -149,6 +149,27 @@ class OnspringService(IOnspringClient client, IOptions<OnspringOptions> options)
       await addFieldDialog.GetByRole(AriaRole.Button, new() { NameRegex = new("save", RegexOptions.IgnoreCase) }).ClickAsync();
     }
 
+    await page.Locator("#grid-layouts").GetByRole(AriaRole.Row, new() { NameRegex = new("default layout", RegexOptions.IgnoreCase) }).ClickAsync();
+    var layoutDesigner = page.GetByRole(AriaRole.Dialog);
+    await layoutDesigner.WaitForAsync();
+
+    foreach (var column in analysis.Columns)
+    {
+      var frame = layoutDesigner.FrameLocator("iframe");
+      var fieldToDrag = frame.Locator(".item-lists").Locator($".layoutItem.draggable:has-text('{column.Name}')").First;
+      var dropZone = frame.Locator(".mainContainer").Locator("[data-column='0'][data-row]").Last;
+      var dropLocation = frame.Locator("#dropLocation");
+
+      await fieldToDrag.HoverAsync();
+      await page.Mouse.DownAsync();
+      await dropZone.HoverAsync();
+      await dropLocation.WaitForAsync();
+      await page.Mouse.UpAsync();
+    }
+
+    await layoutDesigner.GetByRole(AriaRole.Button, new() { NameRegex = new("save & close", RegexOptions.IgnoreCase) }).ClickAsync();
+    await layoutDesigner.WaitForAsync(new() { State = WaitForSelectorState.Hidden });
+
     var url = page.Url;
 
     await page.CloseAsync();
