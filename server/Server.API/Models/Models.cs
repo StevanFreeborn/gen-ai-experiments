@@ -25,7 +25,9 @@ record Citation(decimal Id, string Guidance)
   """;
 }
 
-record ColumnResult(string Name, string Description, string Type);
+record ImportAnalysisResult(string AppName, List<ColumnResult> Columns);
+
+record ColumnResult(string Name, string Description, ColumnType Type);
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
 enum ColumnType

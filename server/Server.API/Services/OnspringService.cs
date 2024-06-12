@@ -1,9 +1,15 @@
+using System.Collections;
+using System.Text.RegularExpressions;
+
 namespace Server.API.Services;
 
 class OnspringOptions
 {
   public string BaseUrl { get; set; } = string.Empty;
   public string ApiKey { get; set; } = string.Empty;
+  public string InstanceUrl { get; set; } = string.Empty;
+  public string CopilotUsername { get; set; } = string.Empty;
+  public string CopilotPassword { get; set; } = string.Empty;
 }
 
 class OnspringOptionsSetup(IConfiguration config) : IConfigureOptions<OnspringOptions>
@@ -19,11 +25,12 @@ class OnspringOptionsSetup(IConfiguration config) : IConfigureOptions<OnspringOp
 
 interface IOnspringService
 {
+  Task<string> CreateAppAsync(ImportAnalysisResult analysis);
   Task<List<Citation>> GetCitationsAsync();
   Task<Control> GetRandomControlAsync();
 }
 
-class OnspringService(IOnspringClient client) : IOnspringService
+class OnspringService(IOnspringClient client, IOptions<OnspringOptions> options) : IOnspringService
 {
   private const int ControlAppId = 14;
   private const int ControlIdFieldId = 585;
@@ -34,6 +41,7 @@ class OnspringService(IOnspringClient client) : IOnspringService
   private const int MaxReportId = 28;
   private const int MinReportId = 29;
   private readonly IOnspringClient _client = client;
+  private readonly OnspringOptions _options = options.Value;
 
   public async Task<List<Citation>> GetCitationsAsync()
   {
@@ -98,6 +106,44 @@ class OnspringService(IOnspringClient client) : IOnspringService
     var control = new Control(idFieldValue ?? 0, nameFieldValue ?? string.Empty, citationIds);
     return control;
   }
+
+  public async Task<string> CreateAppAsync(ImportAnalysisResult analysis)
+  {
+    using var playwright = await Playwright.CreateAsync();
+    var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions { Headless = false });
+    var context = await browser.NewContextAsync(new() { BaseURL = _options.InstanceUrl });
+    var page = await context.NewPageAsync();
+
+    // login
+    await page.GotoAsync("/Public/Login");
+    await page.GetByPlaceholder("Username").FillAsync(_options.CopilotUsername);
+    await page.GetByPlaceholder("Password").FillAsync(_options.CopilotPassword);
+    await page.GetByRole(AriaRole.Button, new() { NameRegex = new("login", RegexOptions.IgnoreCase) }).ClickAsync();
+    await page.WaitForURLAsync(new Regex("/Dashboard"));
+
+    // create app
+    await page.GotoAsync("/Admin/Home");
+    await page.Locator("#admin-create-button").HoverAsync();
+    await page.Locator("#admin-create-menu").Locator("[data-event='addNewApp']").ClickAsync();
+
+    var createAppDialog = page.GetByRole(AriaRole.Dialog, new() { NameRegex = new("create app", RegexOptions.IgnoreCase) });
+    await createAppDialog.WaitForAsync();
+    await createAppDialog.GetByRole(AriaRole.Button, new() { NameRegex = new("continue", RegexOptions.IgnoreCase) }).ClickAsync();
+
+    await createAppDialog.WaitForAsync();
+    await createAppDialog.GetByLabel(new Regex("name", RegexOptions.IgnoreCase)).FillAsync(analysis.AppName);
+    await createAppDialog.GetByRole(AriaRole.Button, new() { NameRegex = new("save", RegexOptions.IgnoreCase) }).ClickAsync();
+    await page.WaitForURLAsync(new Regex(@"/Admin/App/\d+"));
+
+    var url = page.Url;
+
+    await page.CloseAsync();
+    await context.CloseAsync();
+    await browser.CloseAsync();
+
+    return url;
+  }
+
 
   private async Task<List<Citation>> GetCitationsFromOnspring()
   {

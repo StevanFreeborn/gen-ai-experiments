@@ -21,7 +21,7 @@ interface IAnthropicService
   IAsyncEnumerable<string> GenerateResponseAsync(string userInput, string existingContent);
   Task<string> GenerateCompletionAsync(string userInput);
   Task<List<int>> MapControlToCitationsAsync(Control control, List<Citation> citations);
-  Task<List<ColumnResult>> GenerateImportAnalysisAsync(List<string> sampleImportRows);
+  Task<ImportAnalysisResult> GenerateImportAnalysisAsync(List<string> sampleImportRows);
 }
 
 class AnthropicService(HttpClient httpClient, IOptions<AnthropicOptions> options, IPromptBuilder builder) : IAnthropicService
@@ -88,7 +88,7 @@ class AnthropicService(HttpClient httpClient, IOptions<AnthropicOptions> options
     return result.Mappings;
   }
 
-  public async Task<List<ColumnResult>> GenerateImportAnalysisAsync(List<string> sampleImportRows)
+  public async Task<ImportAnalysisResult> GenerateImportAnalysisAsync(List<string> sampleImportRows)
   {
     var prompt = _promptBuilder.CreateImportAnalysisPrompt(sampleImportRows);
 
@@ -102,19 +102,21 @@ class AnthropicService(HttpClient httpClient, IOptions<AnthropicOptions> options
     };
 
     var response = await _client.Messages.GetClaudeMessageAsync(msgParams);
-    var result = ParseColumnResults(response.Message);
+    var result = ParseImportAnalysis(response.Message);
     return result;
   }
 
-  private List<ColumnResult> ParseColumnResults(string importAnalysis)
+  private ImportAnalysisResult ParseImportAnalysis(string importAnalysis)
   {
+    var blankAnalysis = new ImportAnalysisResult(string.Empty, []);
+
     try
     {
-      return JsonSerializer.Deserialize<List<ColumnResult>>(importAnalysis, _serializerOptions) ?? [];
+      return JsonSerializer.Deserialize<ImportAnalysisResult>(importAnalysis, _serializerOptions) ?? blankAnalysis;
     }
     catch (Exception ex) when (ex is JsonException)
     {
-      return [];
+      return blankAnalysis;
     }
   }
 

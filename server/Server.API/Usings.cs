@@ -23,3 +23,5 @@ global using Microsoft.SemanticKernel.Memory;
 global using Microsoft.SemanticKernel.Connectors.Chroma;
 global using Codeblaze.SemanticKernel.Connectors.Ollama;
 global using Microsoft.SemanticKernel.Embeddings;
+
+global using Microsoft.Playwright;

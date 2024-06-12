@@ -119,6 +119,11 @@ app
   })
   .DisableAntiforgery();
 
+app.MapPost("/create-app", async ([FromBody] ImportAnalysisResult analysis, [FromServices] IOnspringService onspringService) =>
+{
+  var appUrl = await onspringService.CreateAppAsync(analysis);
+  return Results.Ok(new { Url = appUrl });
+});
 
 app.UseCors();
 

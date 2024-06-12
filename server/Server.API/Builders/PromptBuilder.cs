@@ -164,23 +164,27 @@ class PromptBuilder : IPromptBuilder
           5. Number - Use for any type of numeric value
       b. Come up with a concise description of what the column likely represents based on its name and values.
     3. If you are given 2 rows of data, treat first row as headers and use column names as names. If you are given a single row of data, generate names based on the values in the first row.
-    4. Construct a JSON array with the following structure:
+    4. Based on the data come up with a name for the app that will hold this data. For example, if the data is about tasks, you could name the app ""Tasks"".
+    5. Construct a JSON object with the following structure:
       ```json
-      [
-        {{
-          ""name"": ""column1_name"",
-          ""description"": ""column1_description"",
-          ""type"": ""column1_type""
-        }},
-        {{
-          ""name"": ""column2_name"", 
-          ""description"": ""column2_description"",
-          ""type"": ""column2_type""
-        }},
-        ...
-      ]
+      {{
+        ""appName"": ""MyApp"",
+        ""columns"": [
+          {{
+            ""name"": ""column1_name"",
+            ""description"": ""column1_description"",
+            ""type"": ""column1_type""
+          }},
+          {{
+            ""name"": ""column2_name"", 
+            ""description"": ""column2_description"",
+            ""type"": ""column2_type""
+          }},
+          ...
+        ]
+      }}
       ```
-    5. Output the complete JSON array.
+    5. Output the complete JSON object.
 
     For example, if the input CSV looked like:
 
@@ -192,24 +196,28 @@ class PromptBuilder : IPromptBuilder
     ```
 
     The expected JSON summary would be:
-    [
-      {{
-        ""name"": ""name"",
-        ""description"": ""The first name of the person"",
-        ""type"": ""string""
-      }},
-      {{
-        ""name"": ""age"",
-        ""description"": ""The age of the person in years"",
-        ""type"": ""integer""
-      }},
-      {{
-        ""name"": ""city"",
-        ""description"": ""The city where the person lives"",
-        ""type"": ""string""
-      }}
-    ]
+    {{
+      ""appName"": ""MyApp"",
+      ""columns"": [
+        {{
+          ""name"": ""name"",
+          ""description"": ""The first name of the person"",
+          ""type"": ""string""
+        }},
+        {{
+          ""name"": ""age"",
+          ""description"": ""The age of the person in years"",
+          ""type"": ""integer""
+        }},
+        {{
+          ""name"": ""city"",
+          ""description"": ""The city where the person lives"",
+          ""type"": ""string""
+        }}
+      ]
+    }}
 
-    Remember, ONLY output the JSON array. DO NOT provide any other output.
+    Remember, ONLY use the types provided: Date, List, Text, Number. DO NOT use any other types.
+    Remember, ONLY output the JSON object. DO NOT provide any other output.
   """;
 }
